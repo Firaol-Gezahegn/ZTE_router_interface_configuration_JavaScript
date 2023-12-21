@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to Configuration Text Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: linear-gradient(to right, #5459ff, #08f44f);
+            margin: 20px;
+
+        }
+
+        button {
+            font-size: 16px;
+            width: 250px;
+            height: 50px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold
+        }
+
+        Input {
+            Display: none;
+        }
+
+        .content {
+            display: grid;
+            place-items: center;
+            height: max-content;
+            width: 100%;
+
+        }
+
+        Label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            width: 250px;
+            height: 250px;
+            margin: 10px;
+            cursor: pointer;
+            border: 1px rgb(0, 0, 0) dashed;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+
+        }
+
+        Label:hover {
+            background-color: rgb(90, 48, 216);
+            Border: rgba(36, 197, 128, 0.571);
+
+        }
+
+        button:hover {
+            background-color: rgb(90, 48, 216);
+        }
+
+        img {
+            height: 70px;
+            width: 200px;
+        }
+
+        .et {
+            position: absolute;
+            Top: 10%;
+            left: 5%;
+        }
+
+        .zte {
+            position: absolute;
+            Top: 10%;
+            right: 5%;
+        }
+
+        p {
+            text-align: center;
+            font-size: 15px;
+            position: absolute;
+            bottom: 3%;
+            right: 42%;
+
+        }
+    </style>
+</head>
+
+
+<body>
+    <div class="img">
+        <img class="zte" src="zte.png">
+        <img class="et" src="et.png">
+    </div>
+    <div class="content">
+        <input type="file" id="excelFileInput" accept=".xlsx"><br>
+        <label for="excelFileInput">Upload excel (.xlsx) File</label><br>
+        <button onclick="processExcel()">Export Config txt file</button>
+    </div>
+    <script>
+        function processExcel() {
+            const input = document.getElementById('excelFileInput');
+            //const outputDiv = document.getElementById('output');
+
+            const file = input.files[0];
+            if (!file) {
+                alert('Please select an Excel file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                let outputText = '';
+
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    // Assuming the structure of the Excel file:
+                    // Column 0: Interface
+                    // Column 1: Site_ID
+                    // Column 2: IP Address
+                    // Column 3: Subnet Mask
+                    // column 4: VLAN
+                    // column 5: vrf
+                    //column 6: service
+                    sheetData.forEach(row => {
+                        if (row.length >= 7) {
+                            const interfaceName = row[0];
+                            const siteID = row[1];
+                            const ipAddress = row[2];
+                            const subnetMask = row[3];
+                            const vlan = row[4];
+                            const vrf = row[5];
+                            const service = row[6];
+
+                            // Format the output string
+                            outputText += `!<if-intf>\n`;
+                            outputText += `interface ${interfaceName}.${vlan}\n`;
+                            outputText += `  description ${siteID} ${service}\n`;
+                            outputText += `  ip vrf forwarding ${vrf}\n`;
+                            outputText += `  ip address ${ipAddress} ${subnetMask}\n`;
+                            outputText += `$\n!</if-intf>\n`;
+                            outputText += `!<vlan>\n`;
+                            outputText += `vlan-configuration\n`;
+                            outputText += `  interface ${interfaceName}.${vlan}\n`;
+                            outputText += `    encapsulation-dot1q ${vlan}\n`;
+                            outputText += `$\n$\n!</vlan>\n`;
+                        }
+                    });
+                });
+                var blob = new Blob([outputText], { type: 'text/plain' });
+                var downloadLink = document.createElement('a');
+                downloadLink.href = window.URL.createObjectURL(blob);
+                downloadLink.download = 'configuration_script.txt';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <p>&copy; Script Prepared by Firaol G.</p>
+</body>
+</div>
+
+</html>
